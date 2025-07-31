@@ -1,18 +1,6 @@
 from graphics import *
 from directory_scraper import *
 
-def forward_button_callback() -> None:
-    print("-->")
-
-def back_button_callback() -> None:
-    print("<--")
-
-def delete_button_callback() -> None:
-    print("deleted fpath")
-
-def rename_button_callback() -> None:
-    print("rename file")
-
 def cube_mesh() -> Model:
     positions = [
         -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0,  1.0,  -1.0,  1.0,  1.0,
@@ -69,19 +57,70 @@ def plane_mesh() -> Model:
 
     return Mesh(positions=positions, indices=indices, uvs=uvs, normals=normals)
 
-def main():
+prev_buffer_size : list = [0]
+def forward_button_callback(app : App) -> None:
+    if not app.hierarchy_tree.selection():
+        return
+    
+    dir_buffer : str = app.hierarchy_tree.item(app.hierarchy_tree.selection()[0])['text']
+    app.selected_directory += dir_buffer + "\\"
+    prev_buffer_size.append(len(dir_buffer) + 1)
+
+    app.clear_directories()
+    populate_directory_tree(app)
+
+def back_button_callback(app : App) -> None:  
+    if len(app.selected_directory) == prev_buffer_size[0]:
+        return
+
+    print(len(app.selected_directory))
+    print(prev_buffer_size[0])
+
+    app.selected_directory = app.selected_directory[:-prev_buffer_size[len(prev_buffer_size)-1]]
+    prev_buffer_size.remove(prev_buffer_size[len(prev_buffer_size)-1])
+
+    app.clear_directories()
+    populate_directory_tree(app)
+
+    print(app.selected_directory)
+
+def delete_button_callback(app : App) -> None:
+    if not app.hierarchy_tree.selection():
+        return
+    
+    if len(app.selected_directory) == prev_buffer_size[0]:
+        return
+    
+    target_dir : str = app.selected_directory + app.hierarchy_tree.item(app.hierarchy_tree.selection()[0])['text']
+
+    if os.path.exists(target_dir):
+        os.remove(target_dir)
+        print(f"{target_dir} has been deleted.")
+    else:
+        print(f"{target_dir} does not exist.")
+
+def rename_button_callback(app : App) -> None:
+    print("rename file")
+
+def populate_directory_tree(app : App) -> None:
+    app.clear_directories()
+    folders = [entry.name for entry in os.scandir(app.selected_directory) if entry.is_dir()]
+    for i in folders:
+        app.insert_directory(i)
+
+def main() -> None:
     app = App(
         500, 500, 500, 500, 
         True, 'viewport', 
         forward_button_callback,
         back_button_callback, 
-        rename_button_callback, 
+        rename_button_callback,
         delete_button_callback
     )
-    for i in range(10):
-        app.insert_directory(f"some folder {i}")
 
-    test_model = Model(plane_mesh(), 'assets/shaders/default.vert', 'assets/shaders/default.frag',
+    app.run_directory_popup()
+
+    grid_model = Model(plane_mesh(), 'assets/shaders/default.vert', 'assets/shaders/default.frag',
         0.0, 0.0, 0.0, 
         0.0, 0.0, 0.0, 
         5.0, 5.0, 5.0
@@ -93,13 +132,21 @@ def main():
         0.0, 0.0, 0.0
     )
 
+    inital_pop : bool = True
     while not app.should_app_close():
+        if app.selected_directory != "_" and inital_pop == True:
+            prev_buffer_size.insert(0, len(app.selected_directory))
+            populate_directory_tree(app)
+            inital_pop = False
+
         app.bind()
-        test_model.render(main_camera, app)
+
+        grid_model.render(main_camera, app)
+
         app.unbind()
         app.render(60)
 
-    test_model.delete()
+    grid_model.delete()
     pg.quit()
 
 if __name__ == '__main__':

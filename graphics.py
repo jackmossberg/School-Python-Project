@@ -119,6 +119,8 @@ class App():
         self.__window_resizable = resizable
         self.__window_title = title
 
+        self.selected_directory = "_"
+
         self.forward_button_callback = forward_button_callback
         self.backward_button_callback = backward_button_callback
         self.rename_button_callback = rename_button_callback
@@ -181,13 +183,21 @@ class App():
         
         self.tkroot = tk.Tk()
         self.tkroot.configure(background="black")
-        self.tkroot.title("OVERDRIVE")
+        self.tkroot.title("Overdrive")
         self.tkroot.geometry(f"{self.window_width + 150}x{self.window_height + 80}")
 
         self.framebuffer_label = None
         self.hierarchy_tree = None
         self.photo = None
+
+        self.popup = None
+        self.dir_list = None
+        
         self.__instansiate_gui()
+
+    def on_select(self, event):
+        selected_item = self.hierarchy_tree.selection()
+        print("Selected:", selected_item)
 
     def __instansiate_gui(self) -> None:
         main_frame = tk.Frame(self.tkroot)
@@ -209,7 +219,8 @@ class App():
         self.hierarchy_tree = ttk.Treeview(hierarchy_frame, show="tree", style="Custom.Treeview")
         self.hierarchy_tree.pack(fill="both", expand=True)
 
-        self.hierarchy_tree.insert("", "end", "root", text="Directories")
+        self.hierarchy_tree.bind("<<TreeviewSelect>>", self.on_select)
+        #self.hierarchy_tree.insert("", "end", "root", text="Directories")
 
         command_frame = tk.Frame(self.tkroot, bg="red")
         command_frame.pack(side="top", anchor="n", fill="both", expand=False)
@@ -217,25 +228,59 @@ class App():
         command_vp = tk.LabelFrame(command_frame, text="cmd", background="darkgrey", foreground="black")
         command_vp.pack(side="left", anchor="s", fill="both", expand=True)
 
-        delete_button = tk.Button(command_vp, text="delete", command=self.delete_button_callback)
+        delete_button = tk.Button(command_vp, text="delete", command=lambda: self.delete_button_callback(self))
         delete_button.pack(side="left", anchor="w", padx=5, pady=0)
 
-        rename_button = tk.Button(command_vp, text="rename", command=self.rename_button_callback)
+        rename_button = tk.Button(command_vp, text="rename", command=lambda: self.rename_button_callback(self))
         rename_button.pack(side="left", anchor="w", padx=5, pady=2)
 
-        backward_button = tk.Button(command_vp, text="<--", command=self.backward_button_callback)
+        backward_button = tk.Button(command_vp, text="<--", command=lambda: self.backward_button_callback(self))
         backward_button.pack(side="left", anchor="w", padx=5, pady=2)
 
-        forward_button = tk.Button(command_vp, text="-->", command=self.forward_button_callback)
+        forward_button = tk.Button(command_vp, text="-->", command=lambda: self.forward_button_callback(self))
         forward_button.pack(side="left", anchor="w", padx=5, pady=2)
     
-    def insert_directory(self, element : str):
-        self.hierarchy_tree.insert("root", "end", text=element)
+    def run_directory_popup(self) -> str:
+        tkroot = tk.Tk()
+        popup = tk.Toplevel(tkroot)
+        popup.title("Select Directory")
+        popup.geometry("300x200")
+        tk.Label(popup, text="Select a viewable directory").pack(pady=5, side="top")
+        ttk.Treeview
         
+    def clear_directories(self):
+        for i in self.hierarchy_tree.get_children():
+            self.hierarchy_tree.delete(i)
+
+    def insert_directory(self, element : str):
+        self.hierarchy_tree.insert("", "end", text=element)
+    
+    def __dir_popup_callback(self, dir : str, popup_root) -> None:
+        self.selected_directory = dir
+        print(dir)
+        popup_root.destroy()
+
+    def run_directory_popup(self) -> str:
+        self.tkroot.withdraw()
+        self.popup = tk.Toplevel(self.tkroot)
+        style = ttk.Style()
+        style.configure("Custom.Treeview", background="darkgrey", foreground="black", fieldbackground="darkgrey")
+        self.popup.title("Select Directory")
+        self.popup.geometry("300x350")
+        tk.Label(self.popup, text="Select a viewable directory", font=("Arial", 14)).pack(pady=20)
+        self.dir_list = ttk.Treeview(self.popup, show="tree", style="Custom.Treeview")
+        self.dir_list.pack(side="top", expand=True)
+
+        for i in os.listdrives():
+            self.dir_list.insert("", "end", text=i)
+
+        try:
+            tk.Button(self.popup, text="select", padx=1, pady=5, command=lambda: self.__dir_popup_callback(self.dir_list.item(self.dir_list.selection()[0])['text'], self.popup)).pack(side="bottom")
+        except:
+            pass
 
     def __render_fbuffer_to_canvas(self):
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0)
-
         fbpixels = glReadPixels(0, 0, self.window_width, self.window_height, GL_RGBA, GL_UNSIGNED_BYTE)
         fbimg = Image.frombytes("RGBA", (self.window_width, self.window_height), fbpixels)
         fbimg = fbimg.transpose(Image.FLIP_TOP_BOTTOM)
@@ -260,6 +305,9 @@ class App():
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
     def render(self, tickrate) -> None:
+        if self.selected_directory != "_":
+            self.tkroot.deiconify()
+
         self.clock.tick(tickrate)
         self.__render_fbuffer_to_canvas()
         self.tkroot.update()
