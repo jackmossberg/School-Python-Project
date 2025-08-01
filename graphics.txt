@@ -1,0 +1,198 @@
+
+task: generate vao
+
+-start
+  -create vertex array object
+  -bind VAO
+  -create and bind position buffer
+  -load position data
+  -set position attribute
+  -enable position attribute
+  -if UVs provided
+    -create and bind UV buffer
+    -load UV data
+    -set UV attribute
+    -enable UV attribute
+  -if normals provided
+    -create and bind normal buffer
+    -load normal data
+    -set normal attribute
+    -enable normal attribute
+  -create and bind index buffer
+  -load index data
+  -unbind VAO
+  -return VAO
+-end
+
+task: generate shader
+
+-start
+  -read vertex shader file
+  -read fragment shader file
+  -create vertex shader
+  -set vertex shader source
+  -compile vertex shader
+  -check vertex shader compilation
+  -create fragment shader
+  -set fragment shader source
+  -compile fragment shader
+  -check fragment shader compilation
+  -create shader program
+  -attach vertex shader
+  -attach fragment shader
+  -link shader program
+  -check shader program linking
+  -delete vertex shader
+  -delete fragment shader
+  -return shader program
+-end
+
+object: app
+task: init 
+  -start
+    -store window dimensions, frame dimensions, resizable, title
+    -store button callbacks
+    -initialize pygame
+    -set window title
+    -set clear color
+    -clear color and depth buffers
+    -flip display
+    -create tkinter root
+    -set window title and size
+    -run GUI instansiation function
+  -end
+
+task: instansiate GUI
+  -start
+    -create main frame
+    -create viewport frame
+    -create framebuffer label
+    -create hierarchy frame
+    -configure treeview style
+    -create hierarchy treeview
+    -bind treeview select event
+    -create command frame
+    -create command viewport
+    -create delete, rename, backward, forward buttons
+  -end
+
+task: run directory popup window
+  -start
+    -hide main window
+    -create popup window
+    -set popup title and size
+    -create directory label
+    -pack directory label
+    -configure treeview style
+    -create directory treeview
+    -pack directory treeview
+    -list drives in treeview
+    -create select button binded callback
+    -pack select button
+  -end
+
+task: render opengl framebuffer to tkinter canvas from pygame window
+  -start
+    -bind read framebuffer
+    -read pixels from framebuffer
+    -create image from pixels
+    -flip image vertically
+    -create photo image
+    -configure framebuffer label with photo
+    -unbind read framebuffer
+  -end
+
+task: bind apps opengl impl for rendering
+  -start
+    -process pygame events
+    -if quit event
+      -set should_close to true
+    -set clear color
+    -clear color and depth buffers
+  -end
+
+task: unbind apps opengl impl from rendering
+  -start
+    -unbind framebuffer
+  -end
+
+task: refresh tkinter windows and displays / set pygame tickrate
+  -start
+    -if a directory is selected in side panel
+      -show root window
+    -tick apps 'clock' at tickrate
+    -render framebuffer to canvas
+    -update tkinter root window
+  -end
+
+task: function for seeing if the app was closed or not
+  -start
+    -return should close variable
+  -end
+-class end
+
+object: camera
+task: init
+  -start
+    -creat FOV, position, rotation variables
+    -initialize empty camera matrix
+  -end
+
+task: calculate camera matrix
+  -start
+    -create perspective projection matrix
+    -create view matrix with eye, target, up
+    -multiply projection and view matrices
+    -store result in objects camera matrix variable
+  -end
+
+task: run matrix related functions
+  -start
+    -call camera matrix with position, rotation, up vector and app
+  -end
+class end
+
+object: mesh
+-task: package vertex data into seperate lists
+  -start
+    -store positions, indices, UVs, normals
+  -end
+class end
+
+object: model
+task: init
+  -start
+    -store mesh
+    -store position, rotation and scale
+    -generate VAO from mesh data
+    -generate shader from vertex / fragment paths
+    -create empty model matrix
+  -end
+
+-task: calculate the transformation matrix
+  -start
+    -create scale matrix
+    -create rotation matrix from Euler angles
+    -create translation matrix
+    -multiply translation, rotation and scale matrices
+    -store result in model matrix
+  -end
+task: render self
+  -start
+    -update camera matrix
+    -update transform matrix
+    -calculate final matrix (camera matrix multiplied by model matrix)
+    -use shader program
+    -bind VAO
+    -set transform matrix uniform
+    -draw elements opengl function (GL_TRIANGLES)
+    -unbind VAO
+    -unuse shader program
+  -end
+
+task: delete self
+  -start
+    -delete VAO
+    -delete shader program
+  -end
+class end
